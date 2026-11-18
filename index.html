@@ -32,6 +32,7 @@
 
         <nav class="dock" aria-label="Taskbar">
           <button class="dock-launcher" id="dock-launcher" aria-label="Open app launcher" aria-expanded="false" aria-controls="launcher" title="App library"><span class="brand-mark">S</span><span class="taskbar-start-label">Apps</span></button>
+          <button class="task-view-button" id="task-view" aria-label="Task view" aria-expanded="false" aria-controls="task-view-panel" title="Task view">▱</button>
           <span class="dock-divider"></span>
           <div class="taskbar-apps" id="taskbar-apps" aria-label="Pinned and running apps"></div>
           <span class="taskbar-spacer"></span>
@@ -52,6 +53,12 @@
           <label class="search-box"><span>⌕</span><input id="app-search" type="search" placeholder="Find an app..." autocomplete="off"></label>
           <div class="app-grid" id="app-grid"></div>
           <div class="launcher-footer"><span>Personal computer</span><button id="launcher-power">⏻ &nbsp;Power options</button></div>
+        </section>
+
+        <section class="task-view-panel hidden" id="task-view-panel" aria-label="Open windows">
+          <header class="task-view-heading"><div><p class="eyebrow">YOUR WORKSPACE</p><h2>Task view</h2></div><button class="icon-button" id="task-view-close" aria-label="Close task view">×</button></header>
+          <div class="task-view-windows"></div>
+          <footer class="task-view-footer"><span>Switch between open apps</span><button id="show-desktop" type="button">Show desktop</button></footer>
         </section>
       </section>
 

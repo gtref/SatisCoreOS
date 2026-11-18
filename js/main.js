@@ -7,8 +7,12 @@ const windowLayer = $("#window-layer");
 const launcher = $("#launcher");
 const appGrid = $("#app-grid");
 const taskbarApps = $("#taskbar-apps");
+const taskView = $("#task-view");
+const taskViewPanel = $("#task-view-panel");
 const toastRegion = $("#toast-region");
 const windows = new Map();
+const DEFAULT_PINNED_APPS = ["files", "notes", "browser", "calculator"];
+const PINNED_APPS_KEY = "satiscoreos-pinned-apps";
 let activeWindow = null;
 let pendingBackup = null;
 let zIndex = 6;
@@ -24,11 +28,37 @@ function notify(message, { type = "success", timeout = 3200 } = {}) {
   }, timeout);
 }
 
+function loadPinnedApps() {
+  const raw = localStorage.getItem(PINNED_APPS_KEY);
+  if (raw === null) return DEFAULT_PINNED_APPS;
+  let saved;
+  try {
+    saved = JSON.parse(raw);
+  } catch {
+    throw new Error("Pinned app settings are not valid JSON.");
+  }
+  if (!Array.isArray(saved) || saved.some(id => typeof id !== "string")) {
+    throw new Error("Pinned app settings have an unsupported format.");
+  }
+  return saved;
+}
+
+let pinnedApps;
+try {
+  pinnedApps = new Set(loadPinnedApps());
+} catch (error) {
+  pinnedApps = new Set(DEFAULT_PINNED_APPS);
+  notify(`Pinned apps could not be loaded: ${error.message}`, { type: "error" });
+}
+
 function refreshDesktopShortcuts() {
   const shortcuts = $("#desktop-shortcuts");
   shortcuts.innerHTML = os.apps.list().map(app => {
     const iconClass = {
       "app-builder": "builder-icon",
+      calculator: "calculator-icon",
+      calendar: "calendar-icon",
+      converter: "converter-icon",
       files: "files-icon",
       notes: "notes-icon",
       terminal: "terminal-icon",
@@ -57,12 +87,30 @@ function refreshLauncher(query = "") {
     launcher.classList.add("hidden");
     $("#dock-launcher").setAttribute("aria-expanded", "false");
     $("#brand-button").setAttribute("aria-expanded", "false");
+    taskViewPanel.classList.add("hidden");
+    taskView.setAttribute("aria-expanded", "false");
     os.apps.open(id).catch(error => notify(error.message, { type: "error" }));
-  }, query);
+  }, query, pinnedApps, toggleAppPin);
+}
+
+function toggleAppPin(appId) {
+  const wasPinned = pinnedApps.has(appId);
+  if (wasPinned) pinnedApps.delete(appId);
+  else pinnedApps.add(appId);
+  try {
+    localStorage.setItem(PINNED_APPS_KEY, JSON.stringify([...pinnedApps]));
+  } catch (error) {
+    if (wasPinned) pinnedApps.add(appId);
+    else pinnedApps.delete(appId);
+    notify(`Pin setting could not be saved: ${error.message}`, { type: "error" });
+    return;
+  }
+  refreshLauncher($("#app-search").value);
+  refreshTaskbar();
 }
 
 function refreshTaskbar() {
-  const apps = os.apps.list();
+  const apps = os.apps.list().filter(app => pinnedApps.has(app.id) || windows.has(app.id));
   taskbarApps.innerHTML = apps.map(app => {
     const frame = windows.get(app.id);
     const running = Boolean(frame);
@@ -73,6 +121,21 @@ function refreshTaskbar() {
       aria-pressed="${active}" title="${escapeHtml(app.name)}${running ? minimized ? " · Minimized" : " · Open" : ""}">
       <span class="taskbar-app-icon">${escapeHtml(app.icon)}</span><span class="taskbar-app-label">${escapeHtml(app.name)}</span></button>`;
   }).join("");
+  refreshTaskView();
+}
+
+function refreshTaskView() {
+  const openWindows = [...windows.entries()]
+    .filter(([, frame]) => !frame.classList.contains("window-closing"));
+  const content = taskViewPanel.querySelector(".task-view-windows");
+  content.innerHTML = openWindows.map(([id, frame]) => `<button type="button" class="task-view-card ${activeWindow === id && !frame.classList.contains("hidden") ? "is-active" : ""}" data-task-view-app="${escapeHtml(id)}" aria-label="${escapeHtml(frame.dataset.appName)}${frame.classList.contains("hidden") ? ", minimized" : ""}">
+    <span class="task-view-card-icon">${escapeHtml(frame.dataset.appIcon)}</span>
+    <span class="task-view-card-name">${escapeHtml(frame.dataset.appName)}</span>
+    <span class="task-view-card-state">${frame.classList.contains("hidden") ? "Minimized" : activeWindow === id ? "In front" : "Open"}</span>
+  </button>`).join("") || `<p class="task-view-empty">No open windows. Launch an app to get started.</p>`;
+  taskView.setAttribute("aria-expanded", String(!taskViewPanel.classList.contains("hidden")));
+  const minimizeAll = taskViewPanel.querySelector("#show-desktop");
+  minimizeAll.disabled = openWindows.every(([, frame]) => frame.classList.contains("hidden"));
 }
 
 function setActiveWindow(appId) {
@@ -96,6 +159,16 @@ function activateTopWindow() {
   activeWindow = null;
   $("#active-app-label").textContent = "Desktop";
   refreshTaskbar();
+}
+
+function toggleTaskView() {
+  const isOpening = taskViewPanel.classList.contains("hidden");
+  launcher.classList.add("hidden");
+  $("#dock-launcher").setAttribute("aria-expanded", "false");
+  $("#brand-button").setAttribute("aria-expanded", "false");
+  taskViewPanel.classList.toggle("hidden", !isOpening);
+  taskView.setAttribute("aria-expanded", String(isOpening));
+  if (isOpening) refreshTaskView();
 }
 
 async function mountAppWindow(app) {
@@ -143,9 +216,30 @@ async function mountAppWindow(app) {
     if (activeWindow === app.id) activateTopWindow();
     else refreshTaskbar();
   });
+  let savedPosition = null;
   frame.querySelector("[data-window-maximize]").addEventListener("click", () => {
-    frame.classList.toggle("maximized");
-    frame.querySelector("[data-window-maximize]").setAttribute("aria-label", frame.classList.contains("maximized") ? "Restore" : "Maximize");
+    const maximizeButton = frame.querySelector("[data-window-maximize]");
+    if (frame.classList.contains("maximized")) {
+      frame.classList.remove("maximized");
+      if (savedPosition) {
+        frame.style.left = savedPosition.left;
+        frame.style.top = savedPosition.top;
+        frame.style.transform = savedPosition.transform;
+      }
+      savedPosition = null;
+      requestAnimationFrame(fitWindowsToViewport);
+    } else {
+      savedPosition = {
+        left: frame.style.left,
+        top: frame.style.top,
+        transform: frame.style.transform
+      };
+      frame.style.removeProperty("left");
+      frame.style.removeProperty("top");
+      frame.style.removeProperty("transform");
+      frame.classList.add("maximized");
+    }
+    maximizeButton.setAttribute("aria-label", frame.classList.contains("maximized") ? "Restore" : "Maximize");
   });
   makeDraggable(frame, frame.querySelector(".window-titlebar"));
   const appApi = os.createAppApi({
@@ -213,8 +307,10 @@ function fitWindowsToViewport() {
     }
     const rect = frame.getBoundingClientRect();
     const layer = windowLayer.getBoundingClientRect();
-    const left = Math.max(-frame.offsetWidth + 100, Math.min(rect.left - layer.left, windowLayer.clientWidth - 80));
-    const top = Math.max(0, Math.min(rect.top - layer.top, windowLayer.clientHeight - 42));
+    const maxLeft = Math.max(0, windowLayer.clientWidth - frame.offsetWidth);
+    const maxTop = Math.max(0, windowLayer.clientHeight - frame.offsetHeight);
+    const left = Math.max(0, Math.min(rect.left - layer.left, maxLeft));
+    const top = Math.max(0, Math.min(rect.top - layer.top, maxTop));
     frame.style.left = `${left}px`;
     frame.style.top = `${top}px`;
     frame.style.transform = "none";
@@ -299,6 +395,10 @@ async function seedFilesystem() {
 
 function showLauncher() {
   const open = launcher.classList.contains("hidden");
+  if (open) {
+    taskViewPanel.classList.add("hidden");
+    taskView.setAttribute("aria-expanded", "false");
+  }
   launcher.classList.toggle("hidden", !open);
   $("#dock-launcher").setAttribute("aria-expanded", String(open));
   $("#brand-button").setAttribute("aria-expanded", String(open));
@@ -310,6 +410,27 @@ function showLauncher() {
 
 $("#brand-button").addEventListener("click", showLauncher);
 $("#dock-launcher").addEventListener("click", showLauncher);
+taskView.addEventListener("click", toggleTaskView);
+$("#task-view-close").addEventListener("click", () => {
+  taskViewPanel.classList.add("hidden");
+  taskView.setAttribute("aria-expanded", "false");
+});
+taskViewPanel.addEventListener("click", event => {
+  if (event.target.closest("#show-desktop")) {
+    for (const frame of windows.values()) frame.classList.add("hidden");
+    activeWindow = null;
+    $("#active-app-label").textContent = "Desktop";
+    taskViewPanel.classList.add("hidden");
+    taskView.setAttribute("aria-expanded", "false");
+    refreshTaskbar();
+    return;
+  }
+  const card = event.target.closest("[data-task-view-app]");
+  if (!card) return;
+  taskViewPanel.classList.add("hidden");
+  taskView.setAttribute("aria-expanded", "false");
+  setActiveWindow(card.dataset.taskViewApp);
+});
 $("#launcher-close").addEventListener("click", () => {
   launcher.classList.add("hidden");
   $("#dock-launcher").setAttribute("aria-expanded", "false");
@@ -320,11 +441,15 @@ $("#launcher-power").addEventListener("click", () => {
   launcher.classList.add("hidden");
   $("#dock-launcher").setAttribute("aria-expanded", "false");
   $("#brand-button").setAttribute("aria-expanded", "false");
+  taskViewPanel.classList.add("hidden");
+  taskView.setAttribute("aria-expanded", "false");
   $("#power-dialog").showModal();
 });
 taskbarApps.addEventListener("click", event => {
   const button = event.target.closest("[data-app]");
   if (!button) return;
+  taskViewPanel.classList.add("hidden");
+  taskView.setAttribute("aria-expanded", "false");
   const frame = windows.get(button.dataset.app);
   if (frame && activeWindow === button.dataset.app && !frame.classList.contains("hidden")) {
     frame.classList.add("hidden");
@@ -335,7 +460,11 @@ taskbarApps.addEventListener("click", event => {
 });
 $("#desktop-shortcuts").addEventListener("click", event => {
   const button = event.target.closest("[data-app]");
-  if (button) os.apps.open(button.dataset.app).catch(error => notify(error.message, { type: "error" }));
+  if (button) {
+    taskViewPanel.classList.add("hidden");
+    taskView.setAttribute("aria-expanded", "false");
+    os.apps.open(button.dataset.app).catch(error => notify(error.message, { type: "error" }));
+  }
 });
 $("#power-button").addEventListener("click", () => $("#power-dialog").showModal());
 $("#import-backup-button").addEventListener("click", chooseBackup);
@@ -386,6 +515,10 @@ document.addEventListener("keydown", event => {
     launcher.classList.add("hidden");
     $("#dock-launcher").setAttribute("aria-expanded", "false");
     $("#brand-button").setAttribute("aria-expanded", "false");
+  }
+  if (event.key === "Escape" && !taskViewPanel.classList.contains("hidden")) {
+    taskViewPanel.classList.add("hidden");
+    taskView.setAttribute("aria-expanded", "false");
   }
 });
 function updateClock() {

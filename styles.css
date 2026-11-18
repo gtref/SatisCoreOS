@@ -62,6 +62,9 @@ kbd { border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06)
 .api-icon { background: linear-gradient(140deg,#d5b6ff,#9d77df); color: #39255b; font: 13px var(--mono); }
 .browser-icon { background: linear-gradient(140deg,#9ed8f2,#6399d1); color: #183c5b; }
 .builder-icon { background: linear-gradient(140deg,#ffd49e,#ff9f91); color: #57302d; }
+.calculator-icon { background: linear-gradient(140deg,#b8e4dc,#72c7b9); color: #183c39; }
+.calendar-icon { background: linear-gradient(140deg,#f6c6d0,#df8fa7); color: #502b39; }
+.converter-icon { background: linear-gradient(140deg,#b8c9f0,#829cda); color: #27395e; }
 .settings-icon { background: linear-gradient(140deg,#b9bbc8,#85899e); color: #2f3040; }
 .custom-icon { background: linear-gradient(140deg,#d5b6ff,#9d77df); color: #39255b; }
 
@@ -73,6 +76,9 @@ kbd { border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06)
 .dock-launcher:hover,.dock-launcher[aria-expanded="true"] { border-color: rgba(195,165,255,.2); background: rgba(195,165,255,.12); }
 .dock-launcher:active { transform: scale(.96); }
 .dock-launcher .brand-mark { width: 31px; height: 31px; border-radius: 10px; font-size: 18px; box-shadow: 0 3px 12px rgba(167,124,255,.25); }
+.task-view-button { position: relative; z-index: 1; display: grid; flex: 0 0 38px; place-items: center; width: 38px; height: 38px; border: 1px solid transparent; border-radius: 11px; background: transparent; color: #c9c6d4; cursor: pointer; font-size: 22px; transition: background .18s ease,border-color .18s ease; }
+.task-view-button:hover,.task-view-button[aria-expanded="true"] { border-color: rgba(195,165,255,.2); background: rgba(195,165,255,.12); }
+.task-view-button[aria-expanded="true"] { color: #d7c4ff; }
 .taskbar-start-label { font-size: 10px; font-weight: 650; color: #d7d4e0; }
 .dock-divider { height: 29px; width: 1px; flex: 0 0 1px; background: rgba(255,255,255,.13); }
 .taskbar-apps { position: relative; z-index: 1; display: flex; align-items: center; gap: 4px; min-width: 0; max-width: min(740px,calc(100vw - 270px)); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
@@ -104,6 +110,8 @@ kbd { border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06)
 .dock-app[data-app="browser"] .taskbar-app-icon { color: #9ed8f2; }
 .dock-app[data-app="settings"] .taskbar-app-icon { color: #c6c3d0; }
 .dock-app[data-app="app-builder"] .taskbar-app-icon { color: #ffc294; }
+.dock-app[data-app="calendar"] .taskbar-app-icon { color: #f0aebe; }
+.dock-app[data-app="converter"] .taskbar-app-icon { color: #b8c9f0; }
 
 .launcher { position: absolute; bottom: calc(clamp(48px,7vh,58px) + 18px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: min(440px,calc(100% - 20px)); max-height: calc(100% - 24px); overflow-y: auto; padding: clamp(15px,4vw,23px); border: 1px solid rgba(255,255,255,.12); border-radius: 18px; background: rgba(27,28,40,.96); box-shadow: 0 20px 70px #0008; backdrop-filter: blur(22px); z-index: 30; animation: launcher-in .2s ease-out both; }
 .launcher-heading { display: flex; justify-content: space-between; align-items: start; }
@@ -112,11 +120,30 @@ kbd { border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06)
 .search-box { display: flex; align-items: center; gap: 9px; margin: 20px 0 14px; padding: 0 12px; height: 39px; color: #a7a5b4; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.08); border-radius: 9px; }
 .search-box input { flex: 1; min-width: 0; border: 0; outline: 0; color: #f3f2f8; background: transparent; font-size: 12px; }
 .app-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(66px,1fr)); gap: 6px; }
-.app-tile { border: 0; background: transparent; border-radius: 10px; padding: 12px 5px; cursor: pointer; color: #dedde7; display: grid; justify-items: center; gap: 9px; font-size: 10px; }
-.app-tile:hover { background: rgba(255,255,255,.07); transform: translateY(-2px); }
+.app-tile { min-width: 0; border: 1px solid transparent; border-radius: 10px; padding: 5px; color: #dedde7; display: grid; justify-items: center; gap: 3px; font-size: 10px; }
+.app-tile:hover { border-color: rgba(255,255,255,.07); background: rgba(255,255,255,.035); }
+.app-tile-launch { width: 100%; min-width: 0; border: 0; border-radius: 7px; padding: 7px 2px 4px; background: transparent; color: inherit; cursor: pointer; display: grid; justify-items: center; gap: 8px; font-size: 10px; }
+.app-tile-launch:hover { background: rgba(255,255,255,.07); transform: translateY(-1px); }
 .app-tile-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; font-size: 19px; }
+.app-pin-toggle { border: 0; border-radius: 6px; padding: 3px 7px; color: #9997a7; background: transparent; cursor: pointer; font-size: 8px; }
+.app-pin-toggle:hover,.app-pin-toggle.is-pinned { color: #d3c2f5; background: rgba(195,165,255,.09); }
 .launcher-footer { border-top: 1px solid rgba(255,255,255,.08); margin-top: 15px; padding-top: 13px; display: flex; justify-content: space-between; color: #858696; font-size: 10px; }
 .launcher-footer button { border: 0; color: #c1bdce; background: transparent; cursor: pointer; font-size: 10px; }
+.task-view-panel { position: absolute; left: 10px; bottom: calc(clamp(48px,7vh,58px) + 18px + env(safe-area-inset-bottom)); width: min(520px,calc(100% - 20px)); max-height: calc(100% - 24px); overflow: auto; padding: 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 17px; background: rgba(27,28,40,.97); box-shadow: 0 20px 70px #0008; backdrop-filter: blur(22px); z-index: 30; animation: launcher-in .2s ease-out both; }
+.task-view-heading { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.task-view-heading .eyebrow { margin-bottom: 5px; }
+.task-view-heading h2 { margin: 0; font: 700 19px Manrope,sans-serif; }
+.task-view-windows { display: grid; grid-template-columns: repeat(auto-fit,minmax(145px,1fr)); gap: 9px; }
+.task-view-card { position: relative; min-width: 0; min-height: 100px; display: grid; grid-template-columns: 32px minmax(0,1fr); grid-template-rows: 1fr auto; align-items: center; gap: 3px 9px; padding: 13px; border: 1px solid rgba(255,255,255,.08); border-radius: 11px; color: #e8e6ee; background: rgba(255,255,255,.035); text-align: left; cursor: pointer; transition: background .16s ease,border-color .16s ease,transform .16s ease; }
+.task-view-card:hover,.task-view-card.is-active { border-color: rgba(195,165,255,.32); background: rgba(195,165,255,.1); transform: translateY(-2px); }
+.task-view-card-icon { grid-row: 1 / 3; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: rgba(195,165,255,.12); color: #d6c3ff; font-size: 17px; }
+.task-view-card-name { overflow: hidden; font-size: 11px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.task-view-card-state { color: #9291a1; font-size: 9px; }
+.task-view-empty { grid-column: 1 / -1; margin: 10px 0; color: #9291a1; font-size: 11px; text-align: center; }
+.task-view-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); color: #858696; font-size: 10px; }
+.task-view-footer button { border: 0; border-radius: 7px; padding: 7px 9px; color: #d5c7f1; background: rgba(195,165,255,.09); cursor: pointer; font-size: 10px; }
+.task-view-footer button:hover:not(:disabled) { background: rgba(195,165,255,.16); }
+.task-view-footer button:disabled { opacity: .4; cursor: default; }
 
 .window-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
 .app-window { position: absolute; width: min(900px,calc(100% - 28px)); height: min(680px,calc(100% - 112px)); min-height: min(250px,calc(100% - 80px)); max-height: calc(100% - 72px); top: 50%; left: 50%; transform: translate(-50%,-52%); display: flex; flex-direction: column; background: #171923; border: 1px solid rgba(255,255,255,.12); border-radius: 13px; overflow: hidden; box-shadow: 0 24px 80px #0008; pointer-events: auto; animation: window-in .22s cubic-bezier(.2,.8,.2,1) both; }
@@ -228,6 +255,57 @@ kbd { border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06)
 
 .api-app,.settings-app { padding: 25px 28px; max-width: 800px; }
 .app-heading { font: 600 22px Manrope,sans-serif; letter-spacing: -.6px; margin: 0 0 6px; }
+.calculator-app { width: min(100%,390px); min-height: 100%; margin: 0 auto; padding: 22px clamp(16px,5vw,25px); display: flex; flex-direction: column; justify-content: center; }
+.calculator-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+.calculator-heading .eyebrow { margin-bottom: 5px; }
+.calculator-mark { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid rgba(131,200,237,.22); border-radius: 13px; color: #9de0d4; background: rgba(131,200,237,.09); font-size: 23px; }
+.calculator-display { min-height: 91px; padding: 14px 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: #13151e; text-align: right; overflow: hidden; }
+.calculator-expression { min-height: 31px; overflow-x: auto; color: #f0eef6; font: 22px/1.35 var(--mono); white-space: nowrap; scrollbar-width: none; }
+.calculator-expression::-webkit-scrollbar { display: none; }
+.calculator-result { min-height: 18px; color: #93cdbf; font: 11px/1.5 var(--mono); overflow-wrap: anywhere; }
+.calculator-result.is-error { color: #ff9aab; }
+.calculator-keys { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; }
+.calculator-key { min-width: 0; height: 48px; border: 1px solid rgba(255,255,255,.07); border-radius: 10px; background: #222431; color: #e8e6ee; cursor: pointer; font-size: 15px; transition: background .15s ease, transform .15s ease; }
+.calculator-key:hover { background: #303342; }
+.calculator-key:active { transform: scale(.96); }
+.calculator-clear { color: #ffbdad; background: rgba(255,173,145,.1); }
+.calculator-operator { color: #a9ded5; background: rgba(131,200,237,.08); }
+.calculator-equals { border-color: transparent; background: #91dcca; color: #183b37; font-weight: 700; }
+.calculator-equals:hover { background: #a5e8d9; }
+.calculator-hint { margin: 12px 0 0; color: #858696; text-align: center; font-size: 9px; }
+.calendar-app,.converter-app { width: min(100%,560px); min-height: 100%; margin: 0 auto; padding: clamp(18px,4vw,27px); }
+.calendar-heading,.converter-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.calendar-heading .eyebrow,.converter-heading .eyebrow { margin-bottom: 5px; }
+.calendar-navigation { display: flex; gap: 3px; }
+.calendar-navigation .icon-button { font-size: 26px; }
+.calendar-month { margin: 18px 0 12px; color: #e8e5f0; font-size: 14px; font-weight: 650; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 4px; }
+.calendar-weekday { padding: 5px 0; color: #8e8d9d; font-size: 9px; text-align: center; }
+.calendar-day { position: relative; display: grid; place-items: center; min-width: 0; aspect-ratio: 1.25; border: 1px solid transparent; border-radius: 8px; color: #dedce6; background: rgba(255,255,255,.025); cursor: pointer; font-size: 10px; }
+.calendar-day:hover { background: rgba(255,255,255,.09); }
+.calendar-day.is-outside { color: #686a79; background: transparent; }
+.calendar-day.is-today { border-color: rgba(195,165,255,.45); color: #d6c3ff; }
+.calendar-day.is-selected { color: #211735; background: #c3a5ff; font-weight: 700; }
+.calendar-day.has-events::after { position: absolute; bottom: 4px; width: 3px; height: 3px; border-radius: 50%; background: #91dcca; content: ""; }
+.calendar-events { margin-top: 17px; padding-top: 13px; border-top: 1px solid rgba(255,255,255,.08); }
+.calendar-events h3 { margin: 0 0 8px; color: #dedce6; font-size: 11px; }
+.calendar-event-list { display: grid; gap: 5px; padding: 0; margin: 0 0 10px; list-style: none; }
+.calendar-event-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 28px; color: #c6c3d1; font-size: 10px; overflow-wrap: anywhere; }
+.calendar-event-list .icon-button { flex: 0 0 27px; width: 27px; height: 27px; font-size: 16px; }
+.calendar-event-list .calendar-empty { color: #858696; }
+.calendar-add-event { display: flex; gap: 7px; }
+.calendar-add-event input,.converter-field input,.converter-field select { min-width: 0; border: 1px solid rgba(255,255,255,.09); border-radius: 8px; padding: 9px 10px; color: #f0eef6; background: #13151e; font-size: 11px; }
+.calendar-add-event input { flex: 1; }
+.calendar-add-event .button { padding: 8px 13px; }
+.converter-app { max-width: 470px; }
+.converter-mark { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid rgba(184,201,240,.2); border-radius: 13px; color: #b8c9f0; background: rgba(130,156,218,.1); font-size: 22px; }
+.converter-field { display: grid; gap: 6px; margin-top: 15px; color: #c6c3d1; font-size: 10px; font-weight: 600; }
+.converter-field input,.converter-field select { width: 100%; }
+.converter-field select { cursor: pointer; }
+.converter-units { display: grid; grid-template-columns: minmax(0,1fr) 24px minmax(0,1fr); align-items: end; gap: 9px; }
+.converter-units > span { padding-bottom: 9px; color: #9694a4; text-align: center; }
+.converter-result { display: block; min-height: 54px; margin-top: 20px; padding: 15px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; color: #bfe7dd; background: #13151e; font: 12px/1.6 var(--mono); overflow-wrap: anywhere; }
+.converter-swap { margin-top: 6px; }
 .api-app .muted,.settings-app .muted { margin: 0 0 19px; }
 .api-section { margin: 20px 0; }
 .api-section h3 { font-size: 11px; color: #d7c6f7; margin: 0 0 8px; }

@@ -139,10 +139,25 @@ export class VirtualFileSystem {
     return new Blob([base64ToBytes(record.content)], { type: record.mimeType });
   }
 
-  async remove(path) {
+  async remove(path, { recursive = false } = {}) {
     const key = normalizePath(path);
     if (key === "/") throw new Error("The virtual disk root cannot be removed.");
-    await this.#store("readwrite", store => requestResult(store.delete(key)));
+    await this.#store("readwrite", async store => {
+      const records = await requestResult(store.getAll());
+      const direct = records.find(record => record.path === key);
+      const descendants = records.filter(record => record.path.startsWith(`${key}/`));
+      const marker = descendants.find(record => record.path === `${key}/.directory`);
+      const isDirectory = Boolean(marker || descendants.length);
+      if (direct && isDirectory) throw new Error(`Path is both a file and directory: ${key}`);
+      if (isDirectory && descendants.some(record => record !== marker) && !recursive) {
+        throw new Error(`Directory is not empty: ${key}`);
+      }
+      if (isDirectory) {
+        for (const record of descendants) store.delete(record.path);
+      } else {
+        store.delete(key);
+      }
+    });
   }
 
   async list(path = "/") {
@@ -179,15 +194,145 @@ export class VirtualFileSystem {
   async mkdir(path) {
     const directory = normalizePath(path);
     if (directory === "/") return;
+    try {
+      const current = await this.stat(directory);
+      if (current.isDirectory) return;
+      throw new Error(`A file already exists at ${directory}.`);
+    } catch (error) {
+      if (!error.message.startsWith("Path not found:")) throw error;
+    }
     const marker = `${directory}/.directory`;
-    if (await this.exists(marker)) return;
     await this.write(marker, "", { mimeType: "application/x-catiscoreos-directory" });
   }
 
   async exists(path) {
     const key = normalizePath(path);
+    if (key === "/") return true;
     const record = await this.#store("readonly", store => requestResult(store.get(key)));
-    return Boolean(record);
+    if (record) return true;
+    return this.#store("readonly", async store => (await requestResult(store.getAll())).some(file => file.path.startsWith(`${key}/`)));
+  }
+
+  async stat(path) {
+    const key = normalizePath(path);
+    if (key === "/") {
+      return { path: key, name: "", isDirectory: true, encoding: "text", mimeType: "application/x-catiscoreos-directory", modifiedAt: null, size: 0 };
+    }
+    const records = await this.#store("readonly", store => requestResult(store.getAll()));
+    const direct = records.find(record => record.path === key);
+    const children = records.filter(record => record.path.startsWith(`${key}/`));
+    const marker = children.find(record => record.path === `${key}/.directory`);
+    const isDirectory = Boolean(marker || children.length);
+    if (direct && isDirectory) throw new Error(`Path is both a file and directory: ${key}`);
+    const record = direct ?? marker;
+    if (!record && !isDirectory) throw new Error(`Path not found: ${key}`);
+    if (isDirectory) {
+      const directoryRecords = children.filter(item => item !== marker);
+      return {
+        path: key,
+        name: key.slice(key.lastIndexOf("/") + 1),
+        isDirectory: true,
+        encoding: "text",
+        mimeType: "application/x-catiscoreos-directory",
+        modifiedAt: directoryRecords.map(item => item.modifiedAt).filter(Boolean).sort().at(-1) ?? marker?.modifiedAt ?? null,
+        size: 0
+      };
+    }
+    const size = record.encoding === "base64"
+      ? base64ToBytes(record.content).byteLength
+      : new TextEncoder().encode(record.content).byteLength;
+    return {
+      path: key,
+      name: key.slice(key.lastIndexOf("/") + 1),
+      isDirectory: false,
+      encoding: record.encoding,
+      mimeType: record.mimeType,
+      modifiedAt: record.modifiedAt,
+      size
+    };
+  }
+
+  async appendText(path, content) {
+    if (typeof content !== "string") throw new TypeError("Text to append must be a string.");
+    const key = normalizePath(path);
+    const record = await this.read(key);
+    if (record.encoding !== "text") throw new Error(`File is not text: ${key}`);
+    return this.write(key, record.content + content, { mimeType: record.mimeType });
+  }
+
+  async search(query, { path = "/", caseSensitive = false, limit = 100 } = {}) {
+    if (typeof query !== "string" || !query.trim()) throw new TypeError("A non-empty search query is required.");
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) {
+      throw new RangeError("Search limit must be an integer between 1 and 1000.");
+    }
+    const directory = normalizePath(path);
+    const prefix = directory === "/" ? "/" : `${directory}/`;
+    const needle = caseSensitive ? query : query.toLocaleLowerCase();
+    const records = await this.#store("readonly", store => requestResult(store.getAll()));
+    return records
+      .filter(record => record.encoding === "text" &&
+        record.mimeType !== "application/x-catiscoreos-directory" &&
+        record.path.startsWith(prefix) &&
+        (caseSensitive ? record.content : record.content.toLocaleLowerCase()).includes(needle))
+      .slice(0, limit)
+      .map(record => ({
+        path: record.path,
+        name: record.path.slice(record.path.lastIndexOf("/") + 1),
+        mimeType: record.mimeType,
+        modifiedAt: record.modifiedAt,
+        snippet: record.content.slice(Math.max(0, (caseSensitive ? record.content : record.content.toLocaleLowerCase()).indexOf(needle) - 40),
+          (caseSensitive ? record.content : record.content.toLocaleLowerCase()).indexOf(needle) + query.length + 80).replace(/\s+/g, " ")
+      }));
+  }
+
+  async copy(source, destination) {
+    return this.#transfer(source, destination, false);
+  }
+
+  async move(source, destination) {
+    return this.#transfer(source, destination, true);
+  }
+
+  async #transfer(source, destination, removeSource) {
+    const sourcePath = normalizePath(source);
+    const destinationPath = normalizePath(destination);
+    if (sourcePath === "/" || destinationPath === "/") {
+      throw new Error("The virtual disk root cannot be copied, moved, or replaced.");
+    }
+    if (sourcePath === destinationPath) throw new Error("Source and destination are the same path.");
+    return this.#store("readwrite", async store => {
+      const records = await requestResult(store.getAll());
+      const direct = records.find(record => record.path === sourcePath);
+      const sourceRecords = records.filter(record => record.path.startsWith(`${sourcePath}/`));
+      const isDirectory = sourceRecords.some(record => record.path === `${sourcePath}/.directory` || record.path.startsWith(`${sourcePath}/`));
+      if (direct && isDirectory) throw new Error(`Path is both a file and directory: ${sourcePath}`);
+      if (!direct && !isDirectory) throw new Error(`Path not found: ${sourcePath}`);
+      if (isDirectory && destinationPath.startsWith(`${sourcePath}/`)) {
+        throw new Error("A directory cannot be copied or moved inside itself.");
+      }
+
+      const entries = isDirectory ? sourceRecords : [direct];
+      const destinationRecords = records.filter(record =>
+        record.path === destinationPath || record.path.startsWith(`${destinationPath}/`)
+      );
+      if (destinationRecords.length) throw new Error(`Destination already exists: ${destinationPath}`);
+
+      const changes = entries.map(record => ({
+        oldPath: record.path,
+        record: {
+          ...record,
+          path: isDirectory
+            ? `${destinationPath}${record.path.slice(sourcePath.length)}`
+            : destinationPath,
+          ...(removeSource ? {} : { modifiedAt: new Date().toISOString() })
+        }
+      }));
+      if (removeSource) {
+        for (const change of changes) store.delete(change.oldPath);
+      }
+      for (const change of changes) store.put(change.record);
+      return { path: destinationPath, isDirectory, entries: changes.length };
+    });
   }
 
   async exportBackup() {

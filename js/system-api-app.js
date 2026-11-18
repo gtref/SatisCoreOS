@@ -14,9 +14,13 @@ function mountApi(root, api) {
     <section class="api-section"><h3>Everyday helpers</h3><pre class="api-code">api.ui.notify("Hello!");
 api.apps.open("notes");
 const files = await api.fs.list("/home/guest");
-await api.fs.write("/home/guest/hello.txt", "Hello!");</pre>
-      <p class="muted">Apps can also read files with <code>api.fs.readText(path)</code>, create folders with <code>api.fs.mkdir(path)</code>, and remove files with <code>api.fs.remove(path)</code>.</p>
+await api.fs.write("/home/guest/hello.txt", "Hello!");
+await api.fs.appendText("/home/guest/hello.txt", "\\nMore text.");
+const info = await api.fs.stat("/home/guest/hello.txt");
+const matches = await api.fs.search("More text", { path: "/home/guest" });</pre>
+      <p class="muted">Use <code>api.fs.read(path)</code> or <code>readText(path)</code> for content, <code>readBlob(path)</code> for a Blob, <code>mkdir(path)</code> for folders, <code>copy(source, destination)</code> and <code>move(source, destination)</code> for file or folder operations, and <code>remove(path, { recursive: true })</code> to remove a folder tree. <code>stat(path)</code> describes a file or folder; <code>exists(path)</code> checks a file record.</p>
     </section>
+    <section class="api-section"><h3>Terminal commands</h3><p class="muted">The shell supports folders and relative paths with <code>cd</code>, detailed listings with <code>ls -l</code>, recursive views with <code>tree</code>, file copy/move with <code>cp</code>/<code>mv</code>, text search with <code>find</code>, metadata with <code>stat</code>, and text helpers <code>head</code>, <code>tail</code>, and <code>wc</code>. Quote paths or text containing spaces.</p></section>
     <section class="api-section"><h3>More tools</h3><p class="muted">Use <code>api.apps.list()</code> to discover apps. The filesystem also supports binary files, usage details, and backup import/export. <code>api.system.version</code> reports the current version (${api.system.version}).</p></section>
     <section class="api-section"><h3>Good to know</h3><p class="muted">This is a browser-based desktop, not a security boundary. Apps run in the same page context; only load code you trust. Files stay in this browser profile until exported or cleared.</p></section>
   </div>`;
