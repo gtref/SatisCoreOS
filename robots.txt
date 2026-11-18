@@ -1,0 +1,5 @@
+# Allow all other crawlers full access
+User-agent: *
+Allow: /
+# Sitemap location
+Sitemap: https://core-os-blush.vercel.app/sitemap.xml
