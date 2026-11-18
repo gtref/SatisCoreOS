@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#11131b">
+    <title>SatisCoreOS 1.2.0</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main id="os" aria-label="SatisCoreOS desktop">
+      <header class="topbar">
+        <button class="brand" id="brand-button" aria-label="Open app launcher" aria-expanded="false" aria-controls="launcher">
+          <span class="brand-mark">S</span><span>SatisCoreOS</span><span class="version-badge">1.2.0</span>
+        </button>
+        <div class="topbar-center" id="active-app-label">Desktop</div>
+        <div class="topbar-right">
+          <span class="storage-indicator"><span class="online-dot"></span> IndexedDB</span>
+          <span class="topbar-session">Personal workspace</span>
+        </div>
+      </header>
+
+      <section class="desktop" id="desktop">
+        <div class="desktop-copy">
+          <p class="eyebrow">YOUR SPACE, YOUR WAY</p>
+          <h1>A little room<br>to make things.</h1>
+          <p class="desktop-hint">Open an app from the taskbar or press <kbd>Ctrl</kbd> + <kbd>K</kbd>.</p>
+        </div>
+        <div class="desktop-shortcuts" id="desktop-shortcuts" aria-label="Desktop app shortcuts"></div>
+
+        <section class="window-layer" id="window-layer" aria-live="polite"></section>
+
+        <nav class="dock" aria-label="Taskbar">
+          <button class="dock-launcher" id="dock-launcher" aria-label="Open app launcher" aria-expanded="false" aria-controls="launcher" title="App library"><span class="brand-mark">S</span><span class="taskbar-start-label">Apps</span></button>
+          <span class="dock-divider"></span>
+          <div class="taskbar-apps" id="taskbar-apps" aria-label="Pinned and running apps"></div>
+          <span class="taskbar-spacer"></span>
+          <div class="taskbar-tray">
+            <span class="taskbar-storage" title="Files are stored in this browser"><span class="online-dot"></span><span>Local</span></span>
+            <div class="taskbar-clock" aria-label="Local date and time">
+              <time id="clock"></time><span id="clock-date"></span>
+            </div>
+            <button class="taskbar-power" id="power-button" aria-label="Power options" title="Power options">⏻</button>
+          </div>
+        </nav>
+
+        <section class="launcher hidden" id="launcher" aria-label="App launcher">
+          <div class="launcher-heading">
+            <div><p class="eyebrow">SATISCOREOS</p><h2>App library</h2></div>
+            <button class="icon-button" id="launcher-close" aria-label="Close launcher">×</button>
+          </div>
+          <label class="search-box"><span>⌕</span><input id="app-search" type="search" placeholder="Find an app..." autocomplete="off"></label>
+          <div class="app-grid" id="app-grid"></div>
+          <div class="launcher-footer"><span>Personal computer</span><button id="launcher-power">⏻ &nbsp;Power options</button></div>
+        </section>
+      </section>
+
+      <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+      <input id="file-picker" type="file" hidden multiple>
+      <input id="backup-picker" type="file" hidden accept=".json,application/json">
+
+      <dialog class="dialog power-dialog" id="power-dialog">
+        <button class="dialog-close icon-button" data-close-dialog aria-label="Close">×</button>
+        <p class="eyebrow">SYSTEM</p><h2>Power options</h2>
+        <p class="muted">Export your virtual disk as a JSON backup before shutting down.</p>
+        <div class="dialog-actions power-actions">
+          <button class="button button-secondary" id="import-backup-button">Import backup</button>
+          <button class="button button-primary" id="shutdown-button">Export &amp; shut down</button>
+        </div>
+        <button class="text-button" id="restart-button">Restart SatisCoreOS</button>
+      </dialog>
+
+      <dialog class="dialog confirm-dialog" id="import-confirm-dialog">
+        <p class="eyebrow">RESTORE VIRTUAL DISK</p><h2>Replace current files?</h2>
+        <p class="muted">This backup will replace every file currently stored in SatisCoreOS. Export a backup first if you want to keep them.</p>
+        <div class="dialog-actions">
+          <button class="button button-secondary" data-close-dialog>Cancel</button>
+          <button class="button button-danger" id="confirm-import-button">Replace files</button>
+        </div>
+      </dialog>
+    </main>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
